@@ -1,0 +1,235 @@
+sudo netstat -ntlp | grep LISTEN
+para matar los procesos mandados con &
+
+
+
+Instalar Docker CE
+------------------------------------
+
+sudo apt remove docker docker-engine docker.io
+
+sudo apt install apt-transport-https ca-certificates curl software-properties-common
+
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+sudo apt-key fingerprint 0EBFCD88
+
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+
+sudo apt update
+sudo apt install docker-ce
+
+sudo usermod -aG docker $USER
+
+docker run hello-world
+
+
+
+Comandos simples de Docker
+---------------------------------------
+https://medium.freecodecamp.org/expose-vs-publish-docker-port-commands-explained-simply-434593dbc9a3
+https://rominirani.com/docker-tutorial-series-part-2-basic-commands-baaf70807fd3
+
+docker run -t -i busybox  ---> bajar y correr una imagen
+
+docker ps -a ---> muestra las cont. con ids
+
+docker system prune -a ---> purga el sistema
+
+docker run -p 80:80/tcp -p 80:80/udp aydusacg4/g_4:v1 --> corre el sistema afuera
+
+docker images ---> muestra las imagenes en el sistema
+
+docker start ab0e37214358
+docker start -i ab0e37214358 ---> relanzar los contenedores
+
+docker attach ab0e37214358  ---> volver a un contenedor
+
+docker stop ab0e37214358 ---> parar contenedor
+
+Ctrl and press P + Q --> salir del container actual
+
+https://www.digitalocean.com/community/tutorials/how-to-remove-docker-images-containers-and-volumes
+
+docker stop $(docker ps -aq)
+
+
+Construyendo DockerFile
+----------------------------------------
+
+FROM aydusacg4/g_4:v1
+
+WORKDIR /app
+
+ADD .env /app
+
+EXPOSE 3306
+
+RUN service apache2 restart
+
+
+COMPILAR
+_________
+docker build -t g_4
+
+docker run -p 80:80 g_4
+
+
+
+Construyendo imagen Ubuntu
+----------------------------------------
+https://rominirani.com/docker-tutorial-series-part-2-basic-commands-baaf70807fd3
+https://docs.docker.com/docker-hub/repos/
+
+Loggear:
+	docker login
+		username: aydusacg4
+		password: @123Password
+	docker login --username=aydusacg4 --password=@123Password
+
+Descargar alguna imagen
+	docker pull ubuntu
+
+FROM aydusacg4/g_4:v1
+EXPOSE 80
+
+Renombrar:
+	docker tag <existing-image> <hub-user>/<repo-name>[:<tag>]
+	docker tag practica1_web aydusacg4/g_4:v1
+
+Subir otros commits
+	docker run -i -t -p 80:80/tcp -p 80:80/udp aydusacg4/g_4:v1
+	Ctrl + P + Q
+	docker ps -a
+	docker commit 7bc6c8f38801(CONT ID. desde docker ps -a) aydusacg4/g_4:v1
+	docker push aydusacg4/g_4:v1
+
+Subir commit inicial
+	docker push aydusacg4/g_4:v1
+
+
+Corriendo la imagen de Ubuntu
+----------------------------------------
+	https://stackoverflow.com/questions/20932357/how-to-enter-in-a-docker-container-already-running-with-a-new-tty
+	
+	docker attach aydusacg4/g_4:version2
+	docker run -i -t --expose=8080 aydusacg4/g_4:version2
+	docker exec -it 39b8a6df875e bash
+
+
+
+Construyendo el servidor de aplicaciones
+----------------------------------------
+
+https://www.rosehosting.com/blog/install-laravel-on-ubuntu-16-04/
+https://howtoubuntu.org/how-to-install-lamp-on-ubuntu
+
+	apt update && apt upgrade
+
+PHP
+	apt install php-pear php-fpm php-dev php-zip php-curl php-xmlrpc php-gd php-mysql php-mbstring php-xml libapache2-mod-php
+
+APACHE 2
+	apt install apache2
+	service apache2 restart
+	
+SCRIPT PARA INICIAR APACHE2
+	nano /usr/local/bin/docker-entrypoint.sh
+	-----> 	echo "Doing my thing! E.g. install wp cli, install wordpress, etc..."
+			exec "apache2-foreground"
+
+
+INSTALAR SYSTEMD para iniciar apache2 at bootstart
+	apt-get install systemd
+	systemctl enable apache2
+	update-rc.d apache2 defaults
+
+LARAVEL
+	curl -sS https://getcomposer.org/installer | php
+	mv composer.phar /usr/local/bin/composer
+	chmod +x /usr/local/bin/composer
+	
+	cd /var/www/html/
+
+	apt-get install git
+	git clone https://github.com/laravel/laravel.git
+	mv laravel/ website/
+	cd website/
+	composer install
+
+	chown www-data: -R /var/www/html/website/
+	php artisan key:generate
+	mv .env.example .env
+	php artisan key:generate
+
+	nano config/app.php
+
+	'key' => env('APP_KEY', 'base64:7fO0S9TxZu8M2NwBWVEQsjPGRi+D1t6Ws8i0Y2yW/vE='),
+
+    'cipher' => 'AES-256-CBC',
+
+    apt-get install nano
+    nano /etc/apache2/sites-available/website.conf
+
+    	<VirtualHost *:80>
+			ServerAdmin admin@practica1.com
+			DocumentRoot /var/www/html/website/public/
+			ServerName practica1.com
+			ServerAlias www.practica1.com
+			<Directory /var/www/html/website/>
+			Options FollowSymLinks
+			AllowOverride All
+			Order allow,deny
+			allow from all
+			</Directory>
+			ErrorLog /var/log/apache2/practica1.com-error_log
+			CustomLog /var/log/apache2/practica1.com-access_log common
+		</VirtualHost>
+
+	nano /etc/apache2/sites-available/000-default.conf 
+	Cambiar DocumentRoot /var/www/html/website/public/
+https://stackoverflow.com/questions/19322345/how-do-i-change-the-default-index-page-in-apache
+
+
+   	a2ensite website.conf
+   	service apache2 reload
+
+
+ Instalar Docker Compose
+-------------------------------------
+
+sudo curl -L https://github.com/docker/compose/releases/download/1.21.2/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+
+sudo chmod +x /usr/local/bin/docker-compose
+
+
+
+Archivo docker-compose.yml
+--------------------------------------
+https://www.linode.com/docs/applications/containers/how-to-use-docker-compose/
+https://docs.docker.com/compose/compose-file/
+https://medium.freecodecamp.org/expose-vs-publish-docker-port-commands-explained-simply-434593dbc9a3
+
+Escribir codigo
+
+Correr desde el mismo directorio
+	docker-compose up --build
+	docker-compose up -d
+
+Explorar la configuracion resultante
+	docker ps
+
+Parar y eliminar contenedores
+	docker-compose down
+
+
+version: 3
+	
+services:
+	db:
+		image: mysql:5.7
+		volumes:
+			-db_data:/var/lib/mysql
+		restart: always
+		environment:
+			

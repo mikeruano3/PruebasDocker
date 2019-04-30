@@ -1,0 +1,31 @@
+FROM eboraas/apache-php:jessie
+MAINTAINER Ed Boraas <ed@boraas.ca>
+
+RUN apt-get update && apt-get -y install git curl unzip php5-mcrypt php5-json && apt-get -y autoremove && apt-get clean && rm -r /var/lib/apt/lists/*
+
+RUN /usr/sbin/a2enmod rewrite
+
+ADD 000-laravel.conf /etc/apache2/sites-available/
+ADD 001-laravel-ssl.conf /etc/apache2/sites-available/
+RUN /usr/sbin/a2dissite '*' && /usr/sbin/a2ensite 000-laravel 001-laravel-ssl
+
+RUN /usr/bin/curl -sS https://getcomposer.org/installer |/usr/bin/php
+RUN /bin/mv composer.phar /usr/local/bin/composer
+RUN rm -rf /var/www/proyecto
+RUN git clone https://github.com/AYD2G4/ProyectoClase.git /var/www/proyecto
+#####RUN git clone -b master --single-branch https://github.com/AYD2G4/ProyectoClase.git /var/www/html/ProyectoClase
+####RUN cp /var/www/proyecto/ProyectoClase/.env.example /var/www/proyecto/ProyectoClase/.env
+RUN chmod +777 -R /var/www/proyecto
+###RUN /usr/local/bin/composer create-project laravel/laravel /var/www/laravel --prefer-dist
+RUN /bin/chown www-data:www-data -R /var/www/proyecto/ProyectoClase/storage /var/www/proyecto/ProyectoClase/bootstrap/cache
+
+RUN rsync -a -v --ignore-existing /var/www/laravel/* /var/www/proyecto/ProyectoClase/
+####RUN cd /var/www/proyecto/ProyectoClase/
+####RUN /usr/local/bin/composer update
+
+EXPOSE 80
+EXPOSE 443
+
+CMD ["/usr/sbin/apache2ctl", "-D", "FOREGROUND"]
+
+ENTRYPOINT cd /var/www/proyecto/ProyectoClase/ && php artisan migrate:refresh && php artisan serve --host=0.0.0.0 --port=8000

@@ -1,0 +1,45 @@
+version: '3'
+services:
+  web:
+    image: aydusacg4/p1_g4:Version6
+    build: .
+    container_name: apache_web
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+      - "8001:8000"
+    links:
+      - db
+    networks:
+      - app-network
+    environment:
+      DB_CONNECTION: 'mysql'
+      DB_HOST: db
+      DB_PORT: '3306'
+      DB_DATABASE: 'laravel'
+      DB_USERNAME: 'root'
+      DB_PASSWORD: '123456'
+
+  #MySQL Service
+  db:
+    image: mysql:5.7.22
+    container_name: db
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_DATABASE: laravel
+      MYSQL_ROOT_PASSWORD: 123456
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    networks:
+      - app-network
+    volumes:
+      - my-datavolume:/var/lib/mysql
+  #Docker Networks
+networks:
+  app-network:
+    driver: bridge
+volumes:
+  my-datavolume:
